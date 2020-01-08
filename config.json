@@ -1,5 +1,6 @@
 {
 	"files":{
+		"genome_build": "hg19",
 		"ratio_file":{
 			"column_names":{
 				"chromosome": "chromosome",
@@ -36,7 +37,9 @@
 				"end": "end",
 				"gene": "gene",
 				"log2FC": "log2"
-			}
+			},
+			"loss_threshold": -0.4,
+			"amp_threshold": 1.5
 		},
 		"annotation_file":{
 			"column_names":{
@@ -56,10 +59,10 @@
 			},
 			"thresholds":{
 				"depth": 20,
-				"forward_alt_reads": 2,
-				"reverse_alt_reads": 2,
-				"low_vaf_filter": 0.05,
-				"high_vaf_filter": 0.95
+				"forward_alt_reads": 5,
+				"reverse_alt_reads": 5,
+				"low_vaf_filter": 0.10,
+				"high_vaf_filter": 0.90
 			}
 		}
 	},
@@ -77,7 +80,8 @@
 				"visibility": "on",
 				"segment_line_color": "orange",
 				"segment_line_width": 4,
-				"segment_line_alpha": 0.9},
+				"segment_line_alpha": 0.9
+			},
 			"gene_markers":{
 				"visibility": "on",
 				"color": "violet"
@@ -92,7 +96,7 @@
 			"height": 80,
 			"output_backend": "webgl",
 			"active_scroll": "xwheel_zoom",
-			"title": "Gene track",
+			"title": "Gene annotation track",
 			"line_color": "blue",
 			"line_width": 20,
 			"line_alpha": 0.9
@@ -110,7 +114,8 @@
 				"visibility": "on",
 				"segment_line_color": "orange",
 				"segment_line_width": 4,
-				"segment_line_alpha": 0.9},
+				"segment_line_alpha": 0.9
+			},
 			"gene_markers":{
 				"visibility": "on",
 				"color": "violet"

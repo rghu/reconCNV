@@ -13,7 +13,7 @@ import argparse
 
 # modules from the plotting library bokeh
 from bokeh.layouts import row, column, layout
-from bokeh.models import Span, Label, OpenURL, TapTool, NumberFormatter, CustomJS, Select, TextInput, MultiSelect
+from bokeh.models import Span, Label, OpenURL, TapTool, NumberFormatter, CustomJS, MultiSelect, DataRange1d
 from bokeh.models.widgets import DataTable, TableColumn, Div
 from bokeh.plotting import *
 from bokeh.transform import factor_cmap
@@ -22,12 +22,12 @@ parser = argparse.ArgumentParser(description="Visualize CNV data from short read
 
 parser.add_argument("--ratio-file", "-r", required=True,
                     dest="ratio_file", default=None,
-                    help="File which contains the log2(FC) between the tumor sample and another normal sample."
+                    help="File which contains the log2(FC) of bins between the tumor sample and another normal sample."
                          " [Required]")
 
 parser.add_argument("--genome-file", "-x", required=True,
                     dest="genome_file", default=None,
-                    help="File which contains chromosome length and cumulative length."
+                    help="File which contains chromosome length and cumulative genomic length."
                          " [Required]")
 
 parser.add_argument("--config-file", "-c", required=True,
@@ -47,7 +47,7 @@ parser.add_argument("--out-file", "-o", required=True,
 
 parser.add_argument("--seg-file", "-s", required=False,
                     dest="seg_file", default=None,
-                    help="File which contains the segmentation of log2(FC) values between the tumor sample "
+                    help="File which contains the segmentation of log2(FC) bin values between the tumor sample "
                          "and normal sample.")
 
 parser.add_argument("--gene-file", "-g", required=False,
@@ -64,7 +64,7 @@ parser.add_argument("--vcf-file", "-v", required=False,
 
 parser.add_argument("--vcf-filt-file", "-f", required=False,
                     dest="vcf_filt_file", default=None, action="store_true",
-                    help="Flag to output filtered variants used to plot VAF. (applicable only if providing VCF)")
+                    help="Flag to output filtered variants used for plotting VAFs. (applicable only if providing VCF)")
 
 parser.add_argument("--bed-blacklist", "-b", required=False,
                     dest="bed_blacklist", default=None,
@@ -96,7 +96,7 @@ def draw_chr_boundary(figure, chr_boundary, genome, vaf):
         for index, row in chr_boundary.iterrows():
             temp_text_loc = round(temp_loc + (row['ind'] - temp_loc) / 2)
             if (vaf == True):
-                text = Label(x=temp_text_loc, y=-0.5,
+                text = Label(x=temp_text_loc, y=0.1,
                              text=str(row[config['files']['ratio_file']['column_names']['chromosome']]),
                              text_color=config['plots']['chromosome_boundaries']['text_color'],
                              text_font_size=config['plots']['chromosome_boundaries']['text_font_size'],
@@ -127,7 +127,7 @@ def draw_chr_boundary(figure, chr_boundary, genome, vaf):
         for index, row in chr_boundary.iterrows():
             temp_text_loc = round(temp_loc + (row['genome_cumsum'] - temp_loc) / 2)
             if (vaf == True):
-                text = Label(x=temp_text_loc, y=-0.5,
+                text = Label(x=temp_text_loc, y=0.1,
                              text=str(row[config['files']['ratio_file']['column_names']['chromosome']]),
                              text_color=config['plots']['chromosome_boundaries']['text_color'],
                              text_font_size=config['plots']['chromosome_boundaries']['text_font_size'],
@@ -156,6 +156,8 @@ def draw_chr_boundary(figure, chr_boundary, genome, vaf):
 
 # read ratio file for plotting log2(FC) points
 data = pd.read_csv(options.ratio_file, sep="\t")
+data[config['files']['ratio_file']['column_names']['chromosome']] = \
+    data[config['files']['ratio_file']['column_names']['chromosome']].astype(str)
 # index generation for marking chromosomes and drawing chromosome lines
 data["ind"] = range(len(data))
 # color background off-target bins (aka Antitarget) differently from on-target bins (aka Target)
@@ -169,6 +171,8 @@ data[config['files']['ratio_file']['column_names']['log2FC']] = np.where(np.logi
     'column_names']['log2FC']])
 
 chr_cumsum = pd.read_csv(options.genome_file, sep="\t")
+chr_cumsum[config['files']['genome_file']['column_names']['chromosome']] = \
+    chr_cumsum[config['files']['genome_file']['column_names']['chromosome']].astype(str)
 
 data = pd.merge(data, chr_cumsum, left_on=config['files']['ratio_file']['column_names']['chromosome'],
                 right_on=config['files']['genome_file']['column_names']['chromosome'], how='left')
@@ -177,6 +181,8 @@ data['genome_cumsum'] = data[config['files']['ratio_file']['column_names']['star
 
 if (options.seg_file):
     seg = pd.read_csv(options.seg_file, sep="\t")
+    seg[config['files']['segmentation_file']['column_names']['chromosome']] = \
+        seg[config['files']['segmentation_file']['column_names']['chromosome']].astype(str)
     seg["prob_start"] = data.merge(seg, how="right",
                                    left_on=[config['files']['ratio_file']['column_names']['chromosome'],
                                             config['files']['ratio_file']['column_names']['start']],
@@ -198,6 +204,8 @@ if (options.seg_file):
 
 if (options.gene_file):
     gen = pd.read_csv(options.gene_file, sep="\t")
+    gen[config['files']['gene_file']['column_names']['chromosome']] = \
+        gen[config['files']['gene_file']['column_names']['chromosome']].astype(str)
     gen["prob_start"] = data.merge(gen, how="right",
                                    left_on=[config['files']['ratio_file']['column_names']['chromosome'],
                                             config['files']['ratio_file']['column_names']['start']],
@@ -229,6 +237,8 @@ if (options.gene_file):
 
 if (options.annot_file):
     gene_track = pd.read_csv(options.annot_file, sep="\t")
+    gene_track[config['files']['annotation_file']['column_names']['chromosome']] = \
+        gene_track[config['files']['annotation_file']['column_names']['chromosome']].astype(str)
     gene_track = pd.merge(gene_track, chr_cumsum,
                           left_on=config['files']['annotation_file']['column_names']['chromosome'],
                           right_on=config['files']['genome_file']['column_names']['chromosome'], how='left')
@@ -243,6 +253,7 @@ if (options.bed_blacklist and options.vcf_file):
     bed_blacklist = pd.read_csv(options.bed_blacklist, sep="\t", header=None)
     bed_blacklist = bed_blacklist[bed_blacklist.columns[0:5]]
     bed_blacklist.columns = ['chromosome', 'start', 'ref', 'alt', 'count']
+    bed_blacklist['chromosome'] = bed_blacklist['chromosome'].astype(str)
 
 if (options.vcf_file):
     df_vaf = []
@@ -274,7 +285,7 @@ if (options.vcf_file):
                                  record.INFO[config['files']['vcf_file']['info_fields']['depth']]})
     df_vaf = pd.DataFrame(df_vaf)
     if (not df_vaf.empty):
-        df_vaf['chromosome'] = pd.to_numeric(df_vaf['chromosome'])
+        df_vaf['chromosome'] = df_vaf['chromosome'].astype(str)
         df_vaf['ref'] = df_vaf['ref'].astype('str')
         df_vaf['alt'] = df_vaf['alt'].astype('str')
 
@@ -343,7 +354,7 @@ if (options.vcf_file):
 output_filename = os.path.basename(options.out_file)
 title_name = os.path.basename(os.path.splitext(options.ratio_file)[0])
 print("Writing visualization to ", outdir, "/", output_filename, "...", sep="")
-output_file(outdir + "/" + output_filename, title=title_name + ' Interactive CNV Plot')
+output_file(outdir + "/" + output_filename, title=title_name + ' reconCNV Plot')
 
 source = ColumnDataSource(data=dict(
     chrom=data[config['files']['ratio_file']['column_names']['chromosome']],
@@ -442,30 +453,32 @@ if (options.vcf_file and not df_vaf.empty):
             genome_cumsum_end=df_vaf_gene.genome_cumsum_end))
 
 TOOLTIPS_GENE_TRACK = [
-    ("Index", "$index"),
+    #("Index", "$index"),
     ("Chr", "@chrom"),
-    ("Start", "@start"),
-    ("End", "@end"),
+    ("Start - End", "@start - @end"),
     ("Gene", "@gene"),
-    ("TxID", "@txid"),
-    ("ExonNum", "@exonNum")
+    ("TxID | ExonNum", "@txid | @exonNum")
+    #("Start", "@start"),
+    #("End", "@end"),
+    #("ExonNum", "@exonNum")
 ]
 
 TOOLTIPS = [
-    ("Index", "$index"),
+    #("Index", "$index"),
     ("Chr", "@chrom"),
-    ("Start", "@start"),
-    ("End", "@end"),
-    ("LogFC", "@logFC"),
-    ("Gene", "@gene")
+    ("Start - End", "@start - @end"),
+    ("Gene", "@gene"),
+    #("Start", "@start"),
+    #("End", "@end"),
+    ("Log2(FC)", "@logFC")
 ]
 
 if (options.vcf_file and not df_vaf.empty):
     TOOLTIPS_VAF = [
         ("Chr", "@chrom"),
-        ("Start", "@start"),
-        ("Ref", "@Ref"),
-        ("Alt", "@Alt"),
+        ("Pos", "@start"),
+        ("Ref | Alt", "@Ref | @Alt"),
+        #("Alt", "@Alt"),
         ("DP", "@DP"),
         ("VAF", "@AF")
     ]
@@ -477,7 +490,8 @@ logFC = figure(plot_width=config['plots']['logFC_ind_plot']['width'],
                output_backend=config['plots']['logFC_ind_plot']['output_backend'],
                active_scroll=config['plots']['logFC_ind_plot']['active_scroll'],
                active_tap="auto",
-               title=config['plots']['logFC_ind_plot']['title'])
+               title=config['plots']['logFC_ind_plot']['title'],
+               x_range=DataRange1d(bounds='auto'))
 
 if (options.gene_file and config['plots']['logFC_ind_plot']['gene_markers']['visibility'] == "on"):
     logFC.quad(top="logFC",
@@ -521,6 +535,7 @@ logFC_genome = figure(plot_width=config['plots']['logFC_genome_plot']['width'],
                       output_backend=config['plots']['logFC_genome_plot']['output_backend'],
                       active_scroll=config['plots']['logFC_genome_plot']['active_scroll'],
                       active_tap="auto",
+                      x_range=DataRange1d(bounds='auto'),
                       title=config['plots']['logFC_genome_plot']['title'] + " (" + title_name + ")")
 
 if (options.gene_file and config['plots']['logFC_genome_plot']['gene_markers']['visibility'] == "on"):
@@ -628,13 +643,16 @@ if (options.vcf_file and not df_vaf.empty):
     VAF_genome.yaxis.axis_label = config['plots']['vaf_plot']['y_axis_label']
     VAF_genome.xaxis.visible = config['plots']['vaf_plot']['x_axis_label_visibility'] == "on"
     VAF_genome.yaxis.visible = config['plots']['vaf_plot']['y_axis_label_visibility'] == "on"
+    VAF_genome.xgrid.grid_line_color = None
 
     logFC_genome.min_border_bottom = 0
     VAF_genome.min_border_top = 0
 
 # Setting up taptool for the link out to UCSC Genome Browser
-url = "https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&position=chr@chrom:@start-@end"
+url = "https://genome.ucsc.edu/cgi-bin/hgTracks?db=" + config['files']['genome_build'] + "&position=@chrom:@start-@end"
 taptool = logFC.select(type=TapTool)
+taptool.callback = OpenURL(url=url)
+taptool = logFC_genome.select(type=TapTool)
 taptool.callback = OpenURL(url=url)
 
 chr_boundary = pd.concat([data[config['files']['ratio_file']['column_names']['chromosome']],
@@ -657,13 +675,16 @@ if (options.vcf_file and not df_vaf.empty):
                                              as_index=False).max()
     draw_chr_boundary(VAF_genome, chr_boundary, genome=True, vaf=True)
 
+    taptool = VAF_genome.select(type=TapTool)
+    taptool.callback = OpenURL(url=url)
+
 # Setting up data table
 columns = [
     TableColumn(field="chrom", title="Chr"),
     TableColumn(field="start", title="Start"),
     TableColumn(field="end", title="End"),
     TableColumn(field="gene", title="Gene"),
-    TableColumn(field="logFC", title="LogFC", formatter=NumberFormatter(format="0.00")),
+    TableColumn(field="logFC", title="Log2(FC)", formatter=NumberFormatter(format="0.00")),
 ]
 
 data_table_cnr = DataTable(source=source,
@@ -697,7 +718,9 @@ if (options.gene_file):
                                          source_copy=source_copy,
                                          source_gene=source_gene,
                                          filteredSource=filteredSource,
-                                         data_table=data_table_gene), code="""
+                                         data_table=data_table_gene,
+                                         loss_threshold=config['files']['gene_file']['loss_threshold'],
+                                         amp_threshold=config['files']['gene_file']['amp_threshold']), code="""
     var data_gene = source_gene.data;
     var f = cb_obj.value;
     var d2 = filteredSource.data;
@@ -711,7 +734,7 @@ if (options.gene_file):
     for(i = 0; i < data_gene['chrom'].length;i++){
 
     if(f == "Loss"){
-        thresh = -0.4
+        thresh = loss_threshold
         if(data_gene['logFC'][i] <= thresh){
             d2['chrom'].push(data_gene['chrom'][i])
             d2['start'].push(data_gene['start'][i])
@@ -720,7 +743,7 @@ if (options.gene_file):
             d2['logFC'].push(data_gene['logFC'][i])
         }
     }else if(f == "Amplification"){
-        thresh = 1.5
+        thresh = amp_threshold
         if(data_gene['logFC'][i] >= thresh){
             d2['chrom'].push(data_gene['chrom'][i])
             d2['start'].push(data_gene['start'][i])
@@ -737,8 +760,8 @@ if (options.gene_file):
         d2['logFC'].push(data_gene['logFC'][i])
 
     }else if (f == "All Amplification and Loss"){
-        thresh_amp = 1.5
-        thresh_del = -0.4
+        thresh_amp = amp_threshold
+        thresh_del = loss_threshold
         if(data_gene['logFC'][i] >= thresh_amp | data_gene['logFC'][i] <= thresh_del){
             d2['chrom'].push(data_gene['chrom'][i])
             d2['start'].push(data_gene['start'][i])
