@@ -145,7 +145,7 @@
 				"gene_line_width": 4,
 				"gene_line_alpha": 0.6},
 			"x_axis_label_visibility": "on",
-			"x_axis_label": "Genome Index",
+			"x_axis_label": "Genome Location",
 			"y_axis_label_visibility": "on",
 			"y_axis_label": "VAF"
 		},
