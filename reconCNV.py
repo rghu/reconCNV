@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import vcf
 import json
+import logging
 
 # module for command line prompt
 import argparse
@@ -70,12 +71,23 @@ parser.add_argument("--bed-blacklist", "-b", required=False,
                     dest="bed_blacklist", default=None,
                     help="File containing variants to NOT plot VAF. (applicable only if providing VCF)")
 
+parser.add_argument("--verbose", "-l", required=False,
+                    dest="verb_log", default=None, action="store_true",
+                    help="Verbose logging output")
+
 options = parser.parse_args()
+
+if options.verb_log:
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
+else:
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
 outdir = options.out_dir
 
 with open(options.config_file, "r") as json_file:
     config = json.load(json_file)
+
+logging.info("Successfully read the configuration file.")
 
 
 def draw_chr_boundary(figure, chr_boundary, genome, vaf):
@@ -155,32 +167,64 @@ def draw_chr_boundary(figure, chr_boundary, genome, vaf):
 
 
 # read ratio file for plotting log2(FC) points
-data = pd.read_csv(options.ratio_file, sep="\t")
+data = pd.read_csv(options.ratio_file, sep=config['files']['ratio_file']['field_separator'])
+logging.info("Successfully read the ratio file.")
+
+# make sure chromosome names are string data type
 data[config['files']['ratio_file']['column_names']['chromosome']] = \
     data[config['files']['ratio_file']['column_names']['chromosome']].astype(str)
+
 # index generation for marking chromosomes and drawing chromosome lines
 data["ind"] = range(len(data))
+
+# check if gene annotation column is provided accurately
+if config['files']['ratio_file']['column_names']['gene'] not in data.columns:
+    data[config['files']['ratio_file']['column_names']['gene']] = "-"
+    logging.warning("Column titled \"" + config['files']['ratio_file']['column_names'][
+        'gene'] + "\" not found in the ratio file. Using \"-\" in place of the annotation. "
+                  "Even off-target bins might be marked as on-target!")
+
+# check if weight column is provided accurately
+if config['files']['ratio_file']['column_names']['weight'] not in data.columns:
+    data[config['files']['ratio_file']['column_names']['weight']] = 0.1
+    logging.warning("Column titled \"" + config['files']['ratio_file']['column_names'][
+        'weight'] + "\" not found in the ratio file. Using \"0.1\" in place of the weight.")
+
 # color background off-target bins (aka Antitarget) differently from on-target bins (aka Target)
 data['label'] = np.where(
     (data[config['files']['ratio_file']['column_names']['gene']] == config['files']['ratio_file']['off_target_label']),
     "Antitarget", "Target")
+
 # do not plot antitarget bins that are below log2 -10 (low confidence points)
 data[config['files']['ratio_file']['column_names']['log2FC']] = np.where(np.logical_and(
     data[config['files']['ratio_file']['column_names']['log2FC']] < config['files']['ratio_file'][
         'off_target_low_conf_log2'], data.label == "Antitarget"), np.nan, data[config['files']['ratio_file'][
     'column_names']['log2FC']])
 
-chr_cumsum = pd.read_csv(options.genome_file, sep="\t")
+chr_cumsum = pd.read_csv(options.genome_file, sep=config['files']['genome_file']['field_separator'])
+logging.info("Successfully read the genome file.")
+
+# make sure chromosome names are string data type
 chr_cumsum[config['files']['genome_file']['column_names']['chromosome']] = \
     chr_cumsum[config['files']['genome_file']['column_names']['chromosome']].astype(str)
 
+# retrieve genome level coordinates from chromosome level coordinates
 data = pd.merge(data, chr_cumsum, left_on=config['files']['ratio_file']['column_names']['chromosome'],
                 right_on=config['files']['genome_file']['column_names']['chromosome'], how='left')
 data['genome_cumsum'] = data[config['files']['ratio_file']['column_names']['start']] + data[
     config['files']['genome_file']['column_names']['chr_cumulative_length']]
 
 if (options.seg_file):
-    seg = pd.read_csv(options.seg_file, sep="\t")
+    seg = pd.read_csv(options.seg_file, sep=config['files']['segmentation_file']['field_separator'])
+    logging.info("Successfully read the genome file.")
+
+    # check if gene annotation column is provided accurately
+    if config['files']['segmentation_file']['column_names']['gene'] not in seg.columns:
+        seg[config['files']['segmentation_file']['column_names']['gene']] = "-"
+        logging.warning("Column titled \"" + config['files']['segmentation_file']['column_names'][
+            'gene'] + "\" not found in the segmentation file. Using \"-\" in place of the annotation.")
+
+    # make sure chromosome names are string data type
     seg[config['files']['segmentation_file']['column_names']['chromosome']] = \
         seg[config['files']['segmentation_file']['column_names']['chromosome']].astype(str)
     seg["prob_start"] = data.merge(seg, how="right",
@@ -203,7 +247,9 @@ if (options.seg_file):
     seg['index'] = range(len(seg))
 
 if (options.gene_file):
-    gen = pd.read_csv(options.gene_file, sep="\t")
+    gen = pd.read_csv(options.gene_file, sep=config['files']['gene_file']['field_separator'])
+    logging.info("Successfully read the gene CNV file.")
+
     gen[config['files']['gene_file']['column_names']['chromosome']] = \
         gen[config['files']['gene_file']['column_names']['chromosome']].astype(str)
     gen["prob_start"] = data.merge(gen, how="right",
@@ -223,6 +269,7 @@ if (options.gene_file):
     gen['genome_cumsum_end'] = gen[config['files']['gene_file']['column_names']['end']] + gen[
         config['files']['genome_file']['column_names']['chr_cumulative_length']]
 
+    #subsetting columns to define gene boundaries
     gene_boundaries = gen[[config['files']['gene_file']['column_names']['chromosome'],
                            config['files']['gene_file']['column_names']['start'],
                            config['files']['gene_file']['column_names']['end'],
@@ -236,7 +283,9 @@ if (options.gene_file):
         config['files']['genome_file']['column_names']['chr_cumulative_length']]
 
 if (options.annot_file):
-    gene_track = pd.read_csv(options.annot_file, sep="\t")
+    gene_track = pd.read_csv(options.annot_file, sep=config['files']['annotation_file']['field_separator'])
+    logging.info("Successfully read the annotation file.")
+
     gene_track[config['files']['annotation_file']['column_names']['chromosome']] = \
         gene_track[config['files']['annotation_file']['column_names']['chromosome']].astype(str)
     gene_track = pd.merge(gene_track, chr_cumsum,
@@ -251,13 +300,17 @@ if (options.annot_file):
 
 if (options.bed_blacklist and options.vcf_file):
     bed_blacklist = pd.read_csv(options.bed_blacklist, sep="\t", header=None)
+    logging.info("Successfully read the BED SNP blacklist file.")
+
     bed_blacklist = bed_blacklist[bed_blacklist.columns[0:5]]
     bed_blacklist.columns = ['chromosome', 'start', 'ref', 'alt', 'count']
     bed_blacklist['chromosome'] = bed_blacklist['chromosome'].astype(str)
 
 if (options.vcf_file):
     df_vaf = []
+    logging.info("Reading VCF file ...")
     vcf_reader = vcf.Reader(open(options.vcf_file, 'r'))
+    logging.info("Processing VCF file ...")
     for record in vcf_reader:
         if record.INFO[config['files']['vcf_file']['info_fields']['depth']] >= \
                 config['files']['vcf_file']['thresholds']['depth'] and \
@@ -284,6 +337,7 @@ if (options.vcf_file):
                                   record.INFO[config['files']['vcf_file']['info_fields']['reverse_alt_reads']][0]) /
                                  record.INFO[config['files']['vcf_file']['info_fields']['depth']]})
     df_vaf = pd.DataFrame(df_vaf)
+    logging.info("Successfully filtered VCF file.")
     if (not df_vaf.empty):
         df_vaf['chromosome'] = df_vaf['chromosome'].astype(str)
         df_vaf['ref'] = df_vaf['ref'].astype('str')
@@ -348,12 +402,13 @@ if (options.vcf_file):
             df_vaf_gene = df_vaf_gene.groupby(['chromosome', 'gene_start', 'gene_end', 'cluster', 'genome_cumsum_start',
                                                'genome_cumsum_end']).mean().reset_index()
     else:
-        print("No variants to plot! (VCF did not have any variants passing the set thresholds)")
+        logging.warning("No variants to plot! (VCF did not have any variants passing the set thresholds)")
 
 # setting up output HTML file
+logging.info("Setting up output file.")
 output_filename = os.path.basename(options.out_file)
 title_name = os.path.basename(os.path.splitext(options.ratio_file)[0])
-print("Writing visualization to ", outdir, "/", output_filename, "...", sep="")
+logging.info("Writing visualization to " + outdir + "/" + output_filename + "...")
 output_file(outdir + "/" + output_filename, title=title_name + ' reconCNV Plot')
 
 source = ColumnDataSource(data=dict(
@@ -700,8 +755,8 @@ if (options.gene_file):
                                 width=config['plots']['gene_table']['width'],
                                 height=config['plots']['gene_table']['height'])
 
-    selection_options = ["---", "All", "All Amplification and Loss", "Amplification", "Loss", "---",
-                         config['files']['ratio_file']['off_target_label']]
+    selection_options = ["---", "All", "All Amplification and Loss", "Amplification", "Gain", "Loss", "Deep Loss",
+                         "---", config['files']['ratio_file']['off_target_label']]
     selection_options.extend(np.unique(gen[config['files']['gene_file']['column_names']['gene']].tolist()))
 
     select = MultiSelect(title="Gene filter", options=selection_options, max_width=300, size=15)
@@ -720,6 +775,8 @@ if (options.gene_file):
                                          filteredSource=filteredSource,
                                          data_table=data_table_gene,
                                          loss_threshold=config['files']['gene_file']['loss_threshold'],
+                                         deep_loss_threshold = config['files']['gene_file']['deep_loss_threshold'],
+                                         gain_threshold=config['files']['gene_file']['gain_threshold'],
                                          amp_threshold=config['files']['gene_file']['amp_threshold']), code="""
     var data_gene = source_gene.data;
     var f = cb_obj.value;
@@ -733,9 +790,18 @@ if (options.gene_file):
 
     for(i = 0; i < data_gene['chrom'].length;i++){
 
-    if(f == "Loss"){
-        thresh = loss_threshold
+    if(f == "Deep Loss"){
+        thresh = deep_loss_threshold
         if(data_gene['logFC'][i] <= thresh){
+            d2['chrom'].push(data_gene['chrom'][i])
+            d2['start'].push(data_gene['start'][i])
+            d2['end'].push(data_gene['end'][i])
+            d2['gene'].push(data_gene['gene'][i])
+            d2['logFC'].push(data_gene['logFC'][i])
+        }
+    }else if(f == "Loss"){
+        thresh = loss_threshold
+        if(data_gene['logFC'][i] <= thresh & data_gene['logFC'][i] > deep_loss_threshold){
             d2['chrom'].push(data_gene['chrom'][i])
             d2['start'].push(data_gene['start'][i])
             d2['end'].push(data_gene['end'][i])
@@ -745,6 +811,14 @@ if (options.gene_file):
     }else if(f == "Amplification"){
         thresh = amp_threshold
         if(data_gene['logFC'][i] >= thresh){
+            d2['chrom'].push(data_gene['chrom'][i])
+            d2['start'].push(data_gene['start'][i])
+            d2['end'].push(data_gene['end'][i])
+            d2['gene'].push(data_gene['gene'][i])
+            d2['logFC'].push(data_gene['logFC'][i])
+        }
+    }else if(f == "Gain"){
+        if(data_gene['logFC'][i] >= gain_threshold & data_gene['logFC'][i] < amp_threshold){
             d2['chrom'].push(data_gene['chrom'][i])
             d2['start'].push(data_gene['start'][i])
             d2['end'].push(data_gene['end'][i])
@@ -806,7 +880,7 @@ if (options.gene_file):
         d3['label'].push(data['label'][i])
         d3['weight'].push(data['weight'][i])
 
-    }else if(f == "Loss" | f == "Amplification" | f == "All Amplification and Loss"){
+    }else if(f == "Loss" | f == "Amplification" | f == "All Amplification and Loss" | f == "Gain" | f == "Deep Loss"){
         if(d2['gene'].includes(data['gene'][i])){
             d3['chrom'].push(data['chrom'][i])
             d3['start'].push(data['start'][i])
@@ -829,8 +903,13 @@ if (options.gene_file):
         d3['label'].push(data['label'][i])
         d3['weight'].push(data['weight'][i])
 
+    } 
     }
+    
+    if (!d3['chrom'].length){
+        d3 = data
     }
+    
     source.data = d3
     filteredSource.change.emit()
     // trigger change on datatable
@@ -902,4 +981,4 @@ else:
 
 save(final_fig)
 # show(final_fig)
-print("Done!")
+logging.info("Done!")

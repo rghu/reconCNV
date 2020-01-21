@@ -10,6 +10,7 @@
 				"log2FC": "log2",
 				"weight": "weight"
 			},
+            "field_separator": "\t",
 			"off_target_label": "Antitarget",
 			"off_target_low_conf_log2": -10,
 			"weight_scaling_factor": 10
@@ -19,7 +20,8 @@
 				"chromosome": "chromosome",
 				"chr_length": "length",
 				"chr_cumulative_length": "length_cumsum"
-			}
+			},
+            "field_separator": "\t"
 		},
 		"segmentation_file":{
 			"column_names":{
@@ -28,7 +30,8 @@
 				"end": "end",
 				"log2FC": "log2",
 				"gene": "gene"
-			}
+			},
+            "field_separator": "\t"
 		},
 		"gene_file":{
 			"column_names":{
@@ -38,7 +41,10 @@
 				"gene": "gene",
 				"log2FC": "log2"
 			},
+            "field_separator": "\t",
 			"loss_threshold": -0.4,
+			"deep_loss_threshold": -1.0,
+			"gain_threshold" : 0.5,
 			"amp_threshold": 1.5
 		},
 		"annotation_file":{
@@ -49,7 +55,8 @@
 				"tx_id": "name",
 				"exon_number": "exon_number",
 				"gene": "name2"
-			}
+			},
+            "field_separator": "\t"
 		},
 		"vcf_file":{
 			"info_fields":{
