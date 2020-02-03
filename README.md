@@ -3,29 +3,29 @@
 Performing copy number analysis from targeted capture high-throughput sequencing has been a challenging task. This involves binning the targeted region, calculating the log ratio of the read depths between the sample and the reference, and then stitching together thousands of these data points into numerous segments (especially in the context of cancer) to derive the copy number state of genomic regions. Recently, several tools have been developed to adequately detect both somatic as well as germline CNVs. However, review and interpretation of these variants in a clinical as well as research setting is a daunting task. This can involve frequent switches back and forth from a static image to numerous tabular files resulting in an exasperated reviewer.  
  ReconCNV has been developed to overcome this challenge by providing interactive dashboard for hunting copy number variations (CNVs) from high-throughput sequencing data. The tool has been tested for targeted gene panels (including exome data). Python3's powerful visualization and data manipulation modules, namely Bokeh and Pandas, are utilized to create these dynamic visualizations. ReconCNV can be readily applied to most CNV calling algorithms with simple modifications to the configuration file. 
 
-<p align="center">
-<img src="images/reconCNV_latest.gif" width="100" height="100"/>
-</p>
- 
 
 ## Installation
 
 The easiest way to get started with reconCNV is via `conda`. Using `conda` ensures you are running Python 3.6 (using which reconCNV was coded) and all dependencies are installed within an virtual environment. This avoids dependency conflicts with existing programs. If `conda` is not available on your system, a minimal installer can be installed using [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
-1. Create your virtual environment. In the below example we are creating a virtual environment called "reconCNV".
+1. Clone the reconCNV repository
+    ```
+    git clone https://github.com/rghu/reconCNV.git
+    ```
+2. Create your virtual environment. In the below example we are creating a virtual environment called "reconCNV".
     ```
     conda create -n reconCNV python=3.6
     ```
-2. Activate your virtual environment.
+3. Activate your virtual environment.
     ```
     conda activate reconCNV
     ```
-3. Install all python module dependencies
+4. Install all python module dependencies
     ```
     pip install --user --requirement requirements.txt
     ```
-4. You are now ready to use reconCNV!
-5. Once you are done using the virtual environment you can exit it.
+5. You are now ready to use reconCNV!
+6. Once you are done using the virtual environment you can exit it.
     ```
     source deactivate reconCNV
     ```
@@ -189,6 +189,8 @@ In this example we will use copy number analysis performed using [CNVkit](https:
 **Configuration file**  
 Written in a JSON format, this file allows the user to customize reconCNV according to the user's input files and plotting preferences. This nested document contains two main keys, "files" and "plots", within which parameter and threshold customizations are listed. "files" key should be used primarily for referencing the column names of input files.  "plots" key is also further nested to include visualization options for different plots produced by reconCNV. Fields used in the configuration are further explained below. An example config file with values is provided for using as a template.
 
+_**All fields in the config file are mandataory and `column_names` must be unique!**_ If 'gene' and 'weight' fields/columns are not present in your input files, keep the default column names as seen in the example configuration file and reconCNV will automatically add pseudo values for these fields/columns. 
+
 Refer to an example configuration file `config.json`.
 
 **Ratio file**  
@@ -214,12 +216,13 @@ Ratio file can have any number of columns in addition to those described above. 
 				"log2FC": <string>,
 				"weight": <string>
 			},
+			"field_separator": "\t",
 			"off_target_label": <string>,
 			"off_target_low_conf_log2": <number>,
 			"weight_scaling_factor": <number>
 		}
 ```
-
+`files -> ratio_file -> field_separator`: delimited to use.   
 `files -> ratio_file -> off_target_label`: in case you are using off-target reads in your analysis use this field to specify your annotation label for them. This is the term used to describe these bins in your ratio file under the "gene" column.  
 `files -> ratio_file -> off_target_low_conf_log2`: using off-target reads can sometimes result in low confidence off-target bins with very low log2(FC) values that do not need to be plotted. Use this field to set a threshold of log2(FC) below which off-target bins will not be plotted.  
 `files -> ratio_file -> weight_scaling_factor`: used for adjusting values in the "weight" column (multiplies the value in the "weight" column with this number).
@@ -233,6 +236,8 @@ _chromosome_: column with the chromosome name
 _length_: column with the length of the chromosome  
 _cumulative length_: column with the cumulative chromosome length to order the chromosomes  
 
+_**Make sure all your input files are using the same genome build!**_
+
 Genome file can have any number of columns in addition to those described above. Column names in your genome file representing these fields can be entered in the configuration file under `files -> genome_file -> column_names`.  
 
 ```
@@ -243,9 +248,11 @@ Genome file can have any number of columns in addition to those described above.
 				"chromosome": <string>,
 				"chr_length": <string>,
 				"chr_cumulative_length": <string>
-			}
+			},
+			"field_separator": "\t"
 		}
 ```
+`files -> genome_file -> field_separator`: delimited to use.   
 
 Users can create a genome file by parsing the index file generated by `samtools faidx` command and adding the corresponding header (chromosome, length, cumulative_length).
 ```
@@ -275,9 +282,11 @@ Segmentation file can have any number of columns in addition to those described 
 				"end": <string>,
 				"log2FC": <string>,
 				"gene": <string>
-			}
+			},
+			"field_separator": "\t"
 		}
 ```
+`files -> segmentation_file -> field_separator`: delimited to use.   
 
 Refer to an example segmentation file `data/sample_data/HT-29.cns`.
 
@@ -302,12 +311,18 @@ Gene file can have any number of columns in addition to those described above. C
 				"gene": <string>,
 				"log2FC": <string>
 			},
-			"loss_threshold": <number>,
-			"amp_threshold": <number>
+            "field_separator": "\t",
+			"loss_threshold": -0.4,
+			"deep_loss_threshold": -1.0,
+			"gain_threshold" : 0.5,
+			"amp_threshold": 1.5
 		}
 ```
 
+`files -> gene_file -> field_separator`: delimited to use.   
 `files -> gene_file -> loss_threshold`: log2 fold change threshold used to mark gene-level losses.  
+`files -> gene_file -> deep_loss_threshold`: log2 fold change threshold used to mark deep gene-level losses.  
+`files -> gene_file -> gain_threshold`: log2 fold change threshold used to mark gene-level gains.  
 `files -> gene_file -> amp_threshold`: log2 fold change threshold used to mark gene-level amplifications.   
 
 Refer to an example gene file `data/sample_data/HT-29.genemetrics.cns`.
@@ -391,9 +406,12 @@ Annotation file can have any number of columns in addition to those described ab
 				"tx_id": <string>,
 				"exon_number": <string>,
 				"gene": <string>"
-			}
+			},
+			"field_separator": "\t"
 		}
 ```
+
+`files -> annotation_file -> field_separator`: delimited to use.  
 
 It is recommended to use coordinates for relevant transcripts to avoid overwhelming the plotting code. Exon coordinates for COSMIC genes for hg19 build are provided as reference.
 
