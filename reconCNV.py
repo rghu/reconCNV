@@ -75,6 +75,8 @@ parser.add_argument("--verbose", "-l", required=False,
                     dest="verb_log", default=None, action="store_true",
                     help="Verbose logging output")
 
+parser.add_argument('--version', action='version', version='%(prog)s v0.1.0-beta')
+
 options = parser.parse_args()
 
 if options.verb_log:
