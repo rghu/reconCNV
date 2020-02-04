@@ -2,4 +2,4 @@ language: python
 python:
   - "3.6"
 script:
-  - python reconCNV.py -x data/hg19_genome_length.txt -c config.json -r data/sample_data/HT-29.cnr  -d results/ -o test.html -l -g data/sample_data/HT-29.genemetrics.cns -s data/sample_data/HT-29.cns -v data/sample_data/HT-29.vcf -b data/artifact_SNP.bed
+  - python reconCNV.py -x data/hg19_genome_length.txt -c config.json -r data/sample_data/HT-29.cnr  -d . -o test.html -l -g data/sample_data/HT-29.genemetrics.cns -s data/sample_data/HT-29.cns -v data/sample_data/HT-29.vcf -b data/artifact_SNP.bed
