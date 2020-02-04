@@ -3,3 +3,7 @@ python:
   - "3.6"
 script:
   - python reconCNV.py -x data/hg19_genome_length.txt -c config.json -r data/sample_data/HT-29.cnr  -d . -o test.html -l -g data/sample_data/HT-29.genemetrics.cns -s data/sample_data/HT-29.cns -v data/sample_data/HT-29.vcf -b data/artifact_SNP.bed
+env:
+  - CODECOV_TOKEN="1f3276c1-8f6e-47d9-a1e4-f0d24c8373b5"
+after_success:
+  - codecov
