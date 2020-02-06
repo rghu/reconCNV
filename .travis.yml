@@ -5,6 +5,6 @@ install:
   - pip install -r requirements.txt
   - pip install codecov
 script:
-  - python reconCNV.py -x data/hg19_genome_length.txt -c config.json -r data/sample_data/HT-29.cnr  -d . -o test.html -l -g data/sample_data/HT-29.genemetrics.cns -s data/sample_data/HT-29.cns -v data/sample_data/HT-29.vcf -b data/artifact_SNP.bed
+  - coverage run reconCNV.py -x data/hg19_genome_length.txt -c config.json -r data/sample_data/HT-29.cnr  -d . -o test.html -l -g data/sample_data/HT-29.genemetrics.cns -s data/sample_data/HT-29.cns -v data/sample_data/HT-29.vcf -b data/artifact_SNP.bed
 after_success:
   - codecov
