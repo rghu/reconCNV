@@ -12,7 +12,7 @@ script:
   - coverage run reconCNV.py -x data/hg19_genome_length.txt -c config.json -r data/sample_data/HT-29.cnr  -d . -o test5.html -l -g data/sample_data/HT-29.genemetrics.cns -s data/sample_data/HT-29.cns -v data/sample_data/HT-29.vcf
   - coverage run reconCNV.py -x data/hg19_genome_length.txt -c config.json -r data/sample_data/HT-29.cnr  -d . -o test6.html -l -g data/sample_data/HT-29.genemetrics.cns -s data/sample_data/HT-29.cns -v data/sample_data/HT-29.vcf -b data/artifact_SNP.bed
   - coverage run reconCNV.py -x data/hg19_genome_length.txt -c config.json -r data/sample_data/HT-29.cnr  -d . -o test.html -s data/sample_data/HT-29.cns -v data/sample_data/HT-29.vcf -b data/artifact_SNP.bed
-  - coverage run reconCNV.py -x data/hg19_genome_length.txt -c config.json -r data/sample_data/HT-29.cnr  -d . -o test.html -l -g data/sample_data/HT-29.genemetrics.cns -v data/sample_data/HT-29.vcf -b data/artifact_SNP.bed
+    - coverage run reconCNV.py -x data/hg19_genome_length.txt -c config.json -r data/sample_data/HT-29.cnr  -d . -o test.html -l -g data/sample_data/HT-29.genemetrics.cns -v data/sample_data/HT-29.vcf -b data/artifact_SNP.bed
   - coverage run reconCNV.py -x data/hg19_genome_length.txt -c config.json -r data/sample_data/HT-29.cnr  -d . -o test.html -l -g data/sample_data/HT-29.genemetrics.cns -s data/sample_data/HT-29.cns
 after_success:
   - codecov
