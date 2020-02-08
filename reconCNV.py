@@ -647,7 +647,7 @@ if (options.annot_file):
                                      output_backend=config['plots']['annotation_plot']['output_backend'],
                                      active_scroll=config['plots']['annotation_plot']['active_scroll'],
                                      active_tap="auto",
-                                     y_range=DataRange1d(bounds=(-1, 1)),
+                                     y_range=DataRange1d(bounds=(-2, 2)),
                                      title=config['plots']['annotation_plot']['title'])
 
     logFC_genome_gene_track.segment(x0="genome_cumsum_start",
