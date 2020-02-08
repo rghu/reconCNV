@@ -548,7 +548,11 @@ logFC = figure(plot_width=config['plots']['logFC_ind_plot']['width'],
                active_scroll=config['plots']['logFC_ind_plot']['active_scroll'],
                active_tap="auto",
                title=config['plots']['logFC_ind_plot']['title'],
-               x_range=DataRange1d(bounds='auto'))
+               #x_range=DataRange1d(bounds='auto'),
+               x_range=DataRange1d(bounds=(min(data['ind']) - 0.05 * max(data['ind']),
+                                           max(data['ind']) + 0.05 * max(data['ind']))),
+               y_range=DataRange1d(bounds=(min(data[config['files']['ratio_file']['column_names']['log2FC']]) - 1,
+                                           max(data[config['files']['ratio_file']['column_names']['log2FC']]) + 1)))
 
 if (options.gene_file and config['plots']['logFC_ind_plot']['gene_markers']['visibility'] == "on"):
     logFC.quad(top="logFC",
@@ -592,7 +596,11 @@ logFC_genome = figure(plot_width=config['plots']['logFC_genome_plot']['width'],
                       output_backend=config['plots']['logFC_genome_plot']['output_backend'],
                       active_scroll=config['plots']['logFC_genome_plot']['active_scroll'],
                       active_tap="auto",
-                      x_range=DataRange1d(bounds='auto'),
+                      x_range=DataRange1d(bounds=(min(data.genome_cumsum) - 0.05 * max(data.genome_cumsum),
+                                                  max(data.genome_cumsum) + 0.05 * max(data.genome_cumsum))),
+                      y_range=DataRange1d(
+                          bounds=(min(data[config['files']['ratio_file']['column_names']['log2FC']]) - 1,
+                                  max(data[config['files']['ratio_file']['column_names']['log2FC']]) + 1)),
                       title=config['plots']['logFC_genome_plot']['title'] + " (" + title_name + ")")
 
 if (options.gene_file and config['plots']['logFC_genome_plot']['gene_markers']['visibility'] == "on"):
@@ -639,6 +647,7 @@ if (options.annot_file):
                                      output_backend=config['plots']['annotation_plot']['output_backend'],
                                      active_scroll=config['plots']['annotation_plot']['active_scroll'],
                                      active_tap="auto",
+                                     y_range=DataRange1d(bounds=(-1, 1)),
                                      title=config['plots']['annotation_plot']['title'])
 
     logFC_genome_gene_track.segment(x0="genome_cumsum_start",
@@ -666,6 +675,7 @@ if (options.vcf_file and not df_vaf.empty):
                         output_backend=config['plots']['vaf_plot']['output_backend'],
                         active_scroll=config['plots']['vaf_plot']['active_scroll'],
                         active_tap="auto",
+                        y_range=DataRange1d(bounds=(-0.05, 1.05)),
                         title=config['plots']['vaf_plot']['title'])
 
     VAF_genome.circle("genome_cumsum", "AF",
