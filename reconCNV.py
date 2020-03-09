@@ -317,26 +317,26 @@ if (options.vcf_file):
         if record.INFO[config['files']['vcf_file']['info_fields']['depth']] >= \
                 config['files']['vcf_file']['thresholds']['depth'] and \
                 record.CHROM != 'X' and \
-                len(record.REF) == 1 and \
-                ((record.INFO[config['files']['vcf_file']['info_fields']['forward_alt_reads']][0] +
-                  record.INFO[config['files']['vcf_file']['info_fields']['reverse_alt_reads']][0]) / record.INFO[
+                len(record.ALT) == 1 and \
+                ((record.samples[0][config['files']['vcf_file']['info_fields']['forward_alt_reads']] +
+                  record.samples[0][config['files']['vcf_file']['info_fields']['reverse_alt_reads']]) / record.INFO[
                      config['files']['vcf_file']['info_fields']['depth']] > config['files']['vcf_file']['thresholds'][
                      'low_vaf_filter'] and
-                 (record.INFO[config['files']['vcf_file']['info_fields']['forward_alt_reads']][0] +
-                  record.INFO[config['files']['vcf_file']['info_fields']['reverse_alt_reads']][0]) / record.INFO[
+                 (record.samples[0][config['files']['vcf_file']['info_fields']['forward_alt_reads']] +
+                  record.samples[0][config['files']['vcf_file']['info_fields']['reverse_alt_reads']]) / record.INFO[
                      config['files']['vcf_file']['info_fields']['depth']] < config['files']['vcf_file']['thresholds'][
                      'high_vaf_filter']) and \
-                record.INFO[config['files']['vcf_file']['info_fields']['forward_alt_reads']][0] > \
+                record.samples[0][config['files']['vcf_file']['info_fields']['forward_alt_reads']] > \
                 config['files']['vcf_file']['thresholds']['forward_alt_reads'] and \
-                record.INFO[config['files']['vcf_file']['info_fields']['reverse_alt_reads']][0] > \
+                record.samples[0][config['files']['vcf_file']['info_fields']['reverse_alt_reads']] > \
                 config['files']['vcf_file']['thresholds']['reverse_alt_reads']:
             df_vaf.append({'chromosome': record.CHROM,
                            'start': record.POS,
                            'ref': record.REF,
                            'alt': record.ALT[0],
                            'DP': record.INFO[config['files']['vcf_file']['info_fields']['depth']],
-                           'AF': (record.INFO[config['files']['vcf_file']['info_fields']['forward_alt_reads']][0] +
-                                  record.INFO[config['files']['vcf_file']['info_fields']['reverse_alt_reads']][0]) /
+                           'AF': (record.samples[0][config['files']['vcf_file']['info_fields']['forward_alt_reads']] +
+                                  record.samples[0][config['files']['vcf_file']['info_fields']['reverse_alt_reads']]) /
                                  record.INFO[config['files']['vcf_file']['info_fields']['depth']]})
     df_vaf = pd.DataFrame(df_vaf)
     logging.info("Successfully filtered VCF file.")
