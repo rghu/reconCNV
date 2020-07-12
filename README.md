@@ -507,7 +507,7 @@ How to call Bokeh JavaScript and CSS library. If it should be called via an URL 
 		}
 ```
 
-**Log2 Fold Change Plots**  
+### Log2 Fold Change Plots  
 Plot options for the log2 fold change plots are described below. They can be modified individually for the log2 fold change genomic coordinates plot and log2 fold change bin indices plot.
 
 _width_: width of the plot.  
@@ -578,7 +578,7 @@ _alpha_: transparency of the artifact mask.
 
 
 
-**Annotation Plot**  
+###Annotation Plot  
 Plot options for the annotation plot is described below. 
 
 _width_, _height_, _output backend_, _active scroll_, _title_ - see _Log2 Fold Change Plots_ section.  
@@ -603,7 +603,7 @@ _line alpha_: opacity of the annotation marker.
 ![Exon annotation on hover](images/quickstart_HT-29_annot.png)
 Displaying exon-level annotation for _ATRX_ upon hovering over glyphs on the annotation track.
 
-**Variant Allele Fraction Plot**  
+###Variant Allele Fraction Plot  
 Plot options for the variant allele fraction plot and filtering thresholds applied to the user provided VCF file.
 
 _width_, _height_, _output backend_, _active scroll_, _title_, _x-axis label visibility_, _x-axis label_, _y-axis label visibility_, _y-axis label_ - see _Log2 Fold Change Plots_ section.  
@@ -643,7 +643,7 @@ Fields under "gene_markers" are similar to "segment_markers". Here instead of us
 		}
 ```  
 
-**Integer Copy Number and Clonality Plot**
+###Integer Copy Number and Clonality Plot  
 
 Plot options for the integer copy number and clonality plot.
 
@@ -676,7 +676,7 @@ For description of fields under "segment_markers" see _Log2 Fold Change Plots_ s
 		
 ```
 
-**Tables**  
+###Tables  
 If the gene file is not provided to reconCNV, it displays a scrollable table of all the bins with details regarding their chromosomal coordinates, gene annotation and log2(FC). Selections made on this table will trigger selection of bins on the Log2 fold change plots and vise-versa.  
 When gene file is provided two tables appear, one representing gene level copy number calls and another is populated when the user selects events from the mutliselect tools. Chromosomal coordinates, gene annotation and log2(FC) values are populated.
 
