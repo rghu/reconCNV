@@ -156,7 +156,7 @@
 				"segment_line_width": 3,
 				"segment_line_alpha": 0.35},
 			"gene_markers":{
-				"visibility":"on",
+				"visibility":"off",
 				"gene_line_color": "green",
 				"gene_line_width": 4,
 				"gene_line_alpha": 0.6},
