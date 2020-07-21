@@ -13,6 +13,9 @@ The easiest way to get started with reconCNV is via `conda`. Using `conda` ensur
     ```
     git clone https://github.com/rghu/reconCNV.git
     ```
+    
+    To use the [Docker container](https://hub.docker.com/repository/docker/raghuc1990/reconcnv) see instructions under Usage ...
+    
 2. Create your virtual environment. In the below example we are creating a virtual environment called "reconCNV".
     ```
     conda create -n reconCNV python=3.6
@@ -33,12 +36,16 @@ The easiest way to get started with reconCNV is via `conda`. Using `conda` ensur
     
 ## Usage
 
+
 ```
 usage: reconCNV.py [-h] --ratio-file RATIO_FILE --genome-file GENOME_FILE
                    --config-file CONFIG_FILE --out-dir OUT_DIR --out-file
                    OUT_FILE [--seg-file SEG_FILE] [--gene-file GENE_FILE]
+                   [--seg-blacklist SEG_BLACKLIST]
                    [--annotation-file ANNOT_FILE] [--vcf-file VCF_FILE]
-                   [--vcf-filt-file] [--bed-blacklist BED_BLACKLIST]
+                   [--recenter RECENTER] [--vcf-filt-file]
+                   [--vcf-blacklist BED_BLACKLIST] [--purity PURITY]
+                   [--ploidy PLOIDY] [--gender GENDER] [--verbose] [--version]
 
 Visualize CNV data from short read sequencing data.
 
@@ -63,18 +70,57 @@ optional arguments:
                         values between the tumor sample and normal sample.
   --gene-file GENE_FILE, -g GENE_FILE
                         File which contains gene calling information.
+  --seg-blacklist SEG_BLACKLIST, -t SEG_BLACKLIST
+                        BED file of problematic copy number regions to
+                        highlight.
   --annotation-file ANNOT_FILE, -a ANNOT_FILE
                         File which contains gene/exon information.
   --vcf-file VCF_FILE, -v VCF_FILE
                         VCF containing variants to plot VAF.
+  --recenter RECENTER, -y RECENTER
+                        Recenter to provided log2(FC).
   --vcf-filt-file, -f   Flag to output filtered variants used for plotting
                         VAFs. (applicable only if providing VCF)
-  --bed-blacklist BED_BLACKLIST, -b BED_BLACKLIST
+  --vcf-blacklist BED_BLACKLIST, -b BED_BLACKLIST
                         File containing variants to NOT plot VAF. (applicable
                         only if providing VCF)
+  --purity PURITY, -p PURITY
+                        Purity of the sample.
+  --ploidy PLOIDY, -l PLOIDY
+                        Ploidy of the sample.
+  --gender GENDER, -z GENDER
+                        Ploidy of the sample.
+  --verbose, -j         Verbose logging output
+  --version             show program's version number and exit
 ```
 
-ReconCNV has been tested on MacOS and Linux environments.
+reconCNV has been tested on MacOS and Linux environments.
+
+
+reconCNV is also available via Docker by executing the following commands:
+
+1. Docker pull command
+
+    ```
+    docker pull raghuc1990/reconcnv
+    ```
+
+2. Append the following command before providing reconCNV command line options
+    
+    ```
+    docker run --rm -it -v <directory_to_mount>:/opt/reconCNV/ raghuc1990/reconcnv:latest \ 
+                        <reconCNV_options>
+    ```
+    
+    Example:
+    ```
+    docker run --rm -it -v `pwd`:/opt/reconCNV/ raghuc1990/reconcnv:latest \ 
+                        -r data/sample_data/HT-29.cnr \
+                        -x data/hg19_genome_length.txt \
+                        -d .  -o HT-29.html \
+                        -c config.json
+    ```
+
 
 ## Quickstart with an example
 
@@ -271,6 +317,9 @@ _start_: column with the starting chromosome coordinates of the segment.
 _end_: column with the ending chromosome coordinates of the segment.  
 _gene_: column with annotation of the segment. Ex. genes associated with the segment.   
 _log2FC_: column with the log2 fold change value of the segment. 
+_major_cn_: column with the major/total integer copy number of the segment.
+_minor_cn_: column with the minor integer copy number of the segment.
+_cell_frac_: column with the cell fraction of the segment.
 
 Segmentation file can have any number of columns in addition to those described above. Column names in your segmentation file representing these fields can be entered in the configuration file under `files -> segmentation_file -> column_names`.  
 
@@ -282,7 +331,10 @@ Segmentation file can have any number of columns in addition to those described 
 				"start": <string>,
 				"end": <string>,
 				"log2FC": <string>,
-				"gene": <string>
+				"gene": <string>,
+				"major_cn": "mcn",
+				"minor_cn": "lcn",
+				"cell_frac": "cf"
 			},
 			"field_separator": "\t"
 		}
@@ -444,9 +496,18 @@ The tools used to explore the plotted data can be listed as an array of strings 
 ```
 "plots":{
 		"plot_tools": <array> # any combination of ["crosshair", "pan", "xwheel_zoom", "xbox_select", "tap", "reset", "save", "zoom_in", "zoom_out","box_zoom"]
+		}
 ```
 
-**Log2 Fold Change Plots**  
+How to call Bokeh JavaScript and CSS library. If it should be called via an URL ("CDN") or be included in the output file created ("INLINE"). `plots -> bokeh_js_css_code`
+
+```
+"plots":{
+		"bokeh_js_css_code": <string> # ["CDN", "INLINE"]
+		}
+```
+
+### Log2 Fold Change Plots  
 Plot options for the log2 fold change plots are described below. They can be modified individually for the log2 fold change genomic coordinates plot and log2 fold change bin indices plot.
 
 _width_: width of the plot.  
@@ -471,8 +532,13 @@ _segment line width_: thickness of the segmentation lines representing copy numb
 _segment line alpha_: opacity of the segmentation lines representing copy number segments.
 
 Under "gene_markers" we have the following options.
-_visibility_: show or hide the gene annotations on the log2(FC) plot. Use "on" for showing and "off" for hiding. ["on", "off"]
+_visibility_: show or hide the gene annotations on the log2(FC) plot. Use "on" for showing and "off" for hiding. ["on", "off"]  
 _color_: color of the gene annotation. This highlights the gene-level fold-change from log2(FC) of 0.
+
+Under "artifact_mask" we have the following options.
+_visibility_: show or hide the artifact/important genomic regions on the log2(FC) plot. Use "on" for showing and "off" for hiding. ["on", "off"]  
+_color_:  color of the artifact mask.  
+_alpha_: transparency of the artifact mask.    
 
 ```
 "plots":{
@@ -495,6 +561,11 @@ _color_: color of the gene annotation. This highlights the gene-level fold-chang
 				"visibility": <string>, # one of these ["on", "off"]
 				"color": <string> # [hex color string/named CSS color string]
 			},
+			"artifact_mask":{
+				"visibility": "on",
+				"color": "black",
+				"alpha": 0.7
+			},
 			"x_axis_label_visibility": <string>, # one of these ["on", "off"]
 			"x_axis_label": <string>,
 			"y_axis_label_visibility": <string>, # one of these ["on", "off"]
@@ -507,7 +578,7 @@ _color_: color of the gene annotation. This highlights the gene-level fold-chang
 
 
 
-**Annotation Plot**  
+### Annotation Plot  
 Plot options for the annotation plot is described below. 
 
 _width_, _height_, _output backend_, _active scroll_, _title_ - see _Log2 Fold Change Plots_ section.  
@@ -532,7 +603,7 @@ _line alpha_: opacity of the annotation marker.
 ![Exon annotation on hover](images/quickstart_HT-29_annot.png)
 Displaying exon-level annotation for _ATRX_ upon hovering over glyphs on the annotation track.
 
-**Variant Allele Fraction Plot**  
+### Variant Allele Fraction Plot  
 Plot options for the variant allele fraction plot and filtering thresholds applied to the user provided VCF file.
 
 _width_, _height_, _output backend_, _active scroll_, _title_, _x-axis label visibility_, _x-axis label_, _y-axis label visibility_, _y-axis label_ - see _Log2 Fold Change Plots_ section.  
@@ -572,7 +643,42 @@ Fields under "gene_markers" are similar to "segment_markers". Here instead of us
 		}
 ```  
 
-**Tables**  
+### Integer Copy Number and Clonality Plot  
+
+Plot options for the integer copy number and clonality plot.
+
+_width_, _height_, _output backend_, _active scroll_, _title_, _x-axis label visibility_, _x-axis label_, _y-axis label visibility_, _y-axis label_ - see _Log2 Fold Change Plots_ section.  
+
+For description of fields under "segment_markers" see _Log2 Fold Change Plots_ section. Segmentation coordinates used in the plot are borrowed from the CNV analysis. Two lines (major and minor) are drawn with each representing integer copy number state.
+
+![Integer copy number and clonality plot](images/quickstart_integer_CN.png)
+
+```
+"plots":{
+		"int_cn_plot":{
+			"width": 1200,
+			"height": 200,
+			"output_backend": <string>, # one of these ["canvas", "svg", "webgl"],
+			"active_scroll":  <string>, # one of these ["wheel_zoom", "xwheel_zoom", "ywheel_zoom"] prefered use is "xwheel_zoom"; remember to add this option to plot -> plot_tools in config file,
+			"title": <string>,
+			"visibility": <string>, # one of these ["on", "off"],
+			"segment_markers":{
+				"major_segment_line_color": <string>, # [hex color string/named CSS color string],
+				"minor_segment_line_color": <string>, # [hex color string/named CSS color string],
+				"major_segment_line_width": <number>,
+				"minor_segment_line_width": <number>,
+				"major_segment_line_alpha": <number>,
+				"minor_segment_line_alpha": <number>},
+			"cell_frac_color": <string>, # [hex color string/named CSS color string],
+			"x_axis_label_visibility": <string>, # one of these ["on", "off"],
+			"x_axis_label": <string>,
+			"y_axis_label_visibility": <string>, # one of these ["on", "off"],
+			"y_axis_label": <string>
+		}
+		
+```
+
+### Tables  
 If the gene file is not provided to reconCNV, it displays a scrollable table of all the bins with details regarding their chromosomal coordinates, gene annotation and log2(FC). Selections made on this table will trigger selection of bins on the Log2 fold change plots and vise-versa.  
 When gene file is provided two tables appear, one representing gene level copy number calls and another is populated when the user selects events from the mutliselect tools. Chromosomal coordinates, gene annotation and log2(FC) values are populated.
 

@@ -18,6 +18,7 @@ from bokeh.models import Span, Label, OpenURL, TapTool, NumberFormatter, CustomJ
 from bokeh.models.widgets import DataTable, TableColumn, Div
 from bokeh.plotting import *
 from bokeh.transform import factor_cmap
+from bokeh.resources import INLINE
 
 parser = argparse.ArgumentParser(description="Visualize CNV data from short read sequencing data.")
 
@@ -55,6 +56,10 @@ parser.add_argument("--gene-file", "-g", required=False,
                     dest="gene_file", default=None,
                     help="File which contains gene calling information.")
 
+parser.add_argument("--seg-blacklist", "-t", required=False,
+                    dest="seg_blacklist", default=None,
+                    help="BED file of problematic copy number regions to highlight.")
+
 parser.add_argument("--annotation-file", "-a", required=False,
                     dest="annot_file", default=None,
                     help="File which contains gene/exon information.")
@@ -63,19 +68,35 @@ parser.add_argument("--vcf-file", "-v", required=False,
                     dest="vcf_file", default=None,
                     help="VCF containing variants to plot VAF.")
 
+parser.add_argument("--recenter", "-y", required=False,
+                    dest="recenter", default=None,
+                    help="Recenter to provided log2(FC).")
+
 parser.add_argument("--vcf-filt-file", "-f", required=False,
                     dest="vcf_filt_file", default=None, action="store_true",
                     help="Flag to output filtered variants used for plotting VAFs. (applicable only if providing VCF)")
 
-parser.add_argument("--bed-blacklist", "-b", required=False,
+parser.add_argument("--vcf-blacklist", "-b", required=False,
                     dest="bed_blacklist", default=None,
                     help="File containing variants to NOT plot VAF. (applicable only if providing VCF)")
 
-parser.add_argument("--verbose", "-l", required=False,
+parser.add_argument("--purity", "-p", required=False,
+                    dest="purity", default=None,
+                    help="Purity of the sample.")
+
+parser.add_argument("--ploidy", "-l", required=False,
+                    dest="ploidy", default=None,
+                    help="Ploidy of the sample.")
+
+parser.add_argument("--gender", "-z", required=False,
+                    dest="gender", default=None,
+                    help="Ploidy of the sample.")
+
+parser.add_argument("--verbose", "-j", required=False,
                     dest="verb_log", default=None, action="store_true",
                     help="Verbose logging output")
 
-parser.add_argument('--version', action='version', version='%(prog)s v0.1.0-beta')
+parser.add_argument('--version', action='version', version='%(prog)s v0.2.0-beta')
 
 options = parser.parse_args()
 
@@ -179,6 +200,10 @@ data[config['files']['ratio_file']['column_names']['chromosome']] = \
 # index generation for marking chromosomes and drawing chromosome lines
 data["ind"] = range(len(data))
 
+if (options.recenter):
+    data[config['files']['ratio_file']['column_names']['log2FC']] = \
+        data[config['files']['ratio_file']['column_names']['log2FC']] - float(options.recenter)
+
 # check if gene annotation column is provided accurately
 if config['files']['ratio_file']['column_names']['gene'] not in data.columns:
     data[config['files']['ratio_file']['column_names']['gene']] = "-"
@@ -216,9 +241,29 @@ data = pd.merge(data, chr_cumsum, left_on=config['files']['ratio_file']['column_
 data['genome_cumsum'] = data[config['files']['ratio_file']['column_names']['start']] + data[
     config['files']['genome_file']['column_names']['chr_cumulative_length']]
 
+if (options.seg_blacklist):
+    seg_blacklist = pd.read_csv(options.seg_blacklist, sep="\t", header=None)
+    logging.info("Successfully read the BED segment artifact file.")
+
+    seg_blacklist = seg_blacklist[seg_blacklist.columns[0:5]]
+    seg_blacklist.columns = ['chromosome', 'start', 'end']
+    seg_blacklist['chromosome'] = seg_blacklist['chromosome'].astype(str)
+
+    seg_blacklist = pd.merge(seg_blacklist, chr_cumsum, left_on="chromosome",
+                   right_on=config['files']['genome_file']['column_names']['chromosome'], how='left')
+    seg_blacklist['genome_cumsum_start'] = seg_blacklist["start"] + seg_blacklist[
+        config['files']['genome_file']['column_names']['chr_cumulative_length']]
+    seg_blacklist['genome_cumsum_end'] = seg_blacklist["end"] + seg_blacklist[
+        config['files']['genome_file']['column_names']['chr_cumulative_length']]
+    seg_blacklist['index'] = range(len(seg_blacklist))
+
 if (options.seg_file):
     seg = pd.read_csv(options.seg_file, sep=config['files']['segmentation_file']['field_separator'])
     logging.info("Successfully read the genome file.")
+
+    if (options.recenter):
+        seg[config['files']['segmentation_file']['column_names']['log2FC']] = \
+            seg[config['files']['segmentation_file']['column_names']['log2FC']] - float(options.recenter)
 
     # check if gene annotation column is provided accurately
     if config['files']['segmentation_file']['column_names']['gene'] not in seg.columns:
@@ -251,6 +296,10 @@ if (options.seg_file):
 if (options.gene_file):
     gen = pd.read_csv(options.gene_file, sep=config['files']['gene_file']['field_separator'])
     logging.info("Successfully read the gene CNV file.")
+
+    if (options.recenter):
+        gen[config['files']['gene_file']['column_names']['log2FC']] = \
+            gen[config['files']['gene_file']['column_names']['log2FC']] - float(options.recenter)
 
     gen[config['files']['gene_file']['column_names']['chromosome']] = \
         gen[config['files']['gene_file']['column_names']['chromosome']].astype(str)
@@ -347,9 +396,8 @@ if (options.vcf_file):
 
         if (options.vcf_filt_file):
             output_VAF_filename = os.path.basename(os.path.splitext(options.vcf_file)[0]) + "_filt_SNPs.txt"
-            print("Writing plotted variants to ", outdir, "/", output_VAF_filename, "...", sep="")
-            df_vaf.to_csv(
-                outdir + "/" + output_VAF_filename, sep="\t", index=False)
+            print("Writing plotted variants to ", outdir, "/", output_VAF_filename, "...", sep=" ")
+            df_vaf.to_csv(outdir + "/" + output_VAF_filename, sep="\t", index=False)
 
         # print(len(df_vaf))
         df_vaf = pd.merge(df_vaf, chr_cumsum, left_on='chromosome',
@@ -437,7 +485,55 @@ source_copy = ColumnDataSource(data=dict(
     weight=data[config['files']['ratio_file']['column_names']['weight']] * config['files']['ratio_file'][
         'weight_scaling_factor']))
 
-if (options.seg_file):
+# if both integer copy number and clonality information is present
+if (options.seg_file and
+        ((config['files']['segmentation_file']['column_names']['major_cn'] in seg.columns and
+        config['files']['segmentation_file']['column_names']['minor_cn'] in seg.columns) and
+        config['files']['segmentation_file']['column_names']['cell_frac'] in seg.columns)):
+    source_seg = ColumnDataSource(data=dict(
+        chrom=seg[config['files']['segmentation_file']['column_names']['chromosome']],
+        start=seg[config['files']['segmentation_file']['column_names']['start']],
+        end=seg[config['files']['segmentation_file']['column_names']['end']],
+        logFC=seg[config['files']['segmentation_file']['column_names']['log2FC']],
+        prob_start=seg.prob_start,
+        prob_end=seg.prob_end,
+        genome_cumsum_start=seg.genome_cumsum_start,
+        genome_cumsum_end=seg.genome_cumsum_end,
+        major_cn=seg[config['files']['segmentation_file']['column_names']['major_cn']],
+        minor_cn=seg[config['files']['segmentation_file']['column_names']['minor_cn']],
+        cell_frac=seg[config['files']['segmentation_file']['column_names']['cell_frac']],
+        gene=seg[config['files']['segmentation_file']['column_names']['gene']]))
+# if only integer copy number information is present
+elif (options.seg_file and
+        (config['files']['segmentation_file']['column_names']['major_cn'] in seg.columns and
+        config['files']['segmentation_file']['column_names']['minor_cn'] in seg.columns)):
+    source_seg = ColumnDataSource(data=dict(
+        chrom=seg[config['files']['segmentation_file']['column_names']['chromosome']],
+        start=seg[config['files']['segmentation_file']['column_names']['start']],
+        end=seg[config['files']['segmentation_file']['column_names']['end']],
+        logFC=seg[config['files']['segmentation_file']['column_names']['log2FC']],
+        prob_start=seg.prob_start,
+        prob_end=seg.prob_end,
+        genome_cumsum_start=seg.genome_cumsum_start,
+        genome_cumsum_end=seg.genome_cumsum_end,
+        major_cn=seg[config['files']['segmentation_file']['column_names']['major_cn']],
+        minor_cn=seg[config['files']['segmentation_file']['column_names']['minor_cn']],
+        gene=seg[config['files']['segmentation_file']['column_names']['gene']]))
+# if only clonality information is present
+elif (options.seg_file and
+    config['files']['segmentation_file']['column_names']['cell_frac'] in seg.columns):
+    source_seg = ColumnDataSource(data=dict(
+        chrom=seg[config['files']['segmentation_file']['column_names']['chromosome']],
+        start=seg[config['files']['segmentation_file']['column_names']['start']],
+        end=seg[config['files']['segmentation_file']['column_names']['end']],
+        logFC=seg[config['files']['segmentation_file']['column_names']['log2FC']],
+        prob_start=seg.prob_start,
+        prob_end=seg.prob_end,
+        genome_cumsum_start=seg.genome_cumsum_start,
+        genome_cumsum_end=seg.genome_cumsum_end,
+        cell_frac=round(seg[config['files']['segmentation_file']['column_names']['cell_frac']],2),
+        gene=seg[config['files']['segmentation_file']['column_names']['gene']]))
+elif (options.seg_file):
     source_seg = ColumnDataSource(data=dict(
         chrom=seg[config['files']['segmentation_file']['column_names']['chromosome']],
         start=seg[config['files']['segmentation_file']['column_names']['start']],
@@ -448,6 +544,7 @@ if (options.seg_file):
         genome_cumsum_start=seg.genome_cumsum_start,
         genome_cumsum_end=seg.genome_cumsum_end,
         gene=seg[config['files']['segmentation_file']['column_names']['gene']]))
+
 
 if (options.gene_file):
     source_gene = ColumnDataSource(data=dict(
@@ -460,6 +557,14 @@ if (options.gene_file):
         genome_cumsum_start=gen.genome_cumsum_start,
         genome_cumsum_end=gen.genome_cumsum_end,
         gene=gen[config['files']['gene_file']['column_names']['gene']]))
+
+if (options.seg_blacklist and config['plots']['logFC_genome_plot']['artifact_mask']['visibility'] == "on"):
+    source_seg_blacklist = ColumnDataSource(data=dict(
+        chrom=seg_blacklist['chromosome'],
+        start=seg_blacklist['start'],
+        end=seg_blacklist['end'],
+        genome_cumsum_start=seg_blacklist['genome_cumsum_start'],
+        genome_cumsum_end=seg_blacklist['genome_cumsum_end']))
 
 if (options.annot_file):
     source_gene_track = ColumnDataSource(data=dict(
@@ -515,6 +620,17 @@ TOOLTIPS_GENE_TRACK = [
     ("Start - End", "@start - @end"),
     ("Gene", "@gene"),
     ("TxID | ExonNum", "@txid | @exonNum")
+    #("Start", "@start"),
+    #("End", "@end"),
+    #("ExonNum", "@exonNum")
+]
+
+TOOLTIPS_INT_CN = [
+    #("Index", "$index"),
+    ("Cell Fraction", "@cell_frac{0.00}"),
+    # ("Start - End", "@start - @end"),
+    # ("Gene", "@gene"),
+    # ("TxID | ExonNum", "@txid | @exonNum")
     #("Start", "@start"),
     #("End", "@end"),
     #("ExonNum", "@exonNum")
@@ -601,7 +717,9 @@ logFC_genome = figure(plot_width=config['plots']['logFC_genome_plot']['width'],
                       y_range=DataRange1d(
                           bounds=(min(data[config['files']['ratio_file']['column_names']['log2FC']]) - 1,
                                   max(data[config['files']['ratio_file']['column_names']['log2FC']]) + 1)),
-                      title=config['plots']['logFC_genome_plot']['title'] + " (" + title_name + ")")
+                      title=config['plots']['logFC_genome_plot']['title'] + " (" + title_name + ")" + "\t\tGender: " +
+                            str(options.gender) + "\t\tPurity: " + str(options.purity) +
+                            "\t\tPloidy: " + str(options.ploidy))
 
 if (options.gene_file and config['plots']['logFC_genome_plot']['gene_markers']['visibility'] == "on"):
     logFC_genome.quad(top="logFC",
@@ -631,11 +749,93 @@ if (options.seg_file and config['plots']['logFC_genome_plot']['segment_markers']
                          alpha=config['plots']['logFC_genome_plot']['segment_markers']['segment_line_alpha'],
                          source=source_seg)  # segmentation line
 
+# print(options.bed_blacklist)
+if (options.seg_blacklist and config['plots']['logFC_genome_plot']['artifact_mask']['visibility'] == "on"):
+    # print("Entered!")
+    logFC_genome.quad(top=max(data[config['files']['ratio_file']['column_names']['log2FC']]),
+                      bottom=min(data[config['files']['ratio_file']['column_names']['log2FC']]),
+                      left="genome_cumsum_start",
+                      right="genome_cumsum_end",
+                      color=config['plots']['logFC_genome_plot']['artifact_mask']['color'],
+                      alpha=config['plots']['logFC_genome_plot']['artifact_mask']['alpha'],
+                      level="underlay",
+                      source=source_seg_blacklist)
+
+
 logFC_genome.xaxis.axis_label = config['plots']['logFC_genome_plot']['x_axis_label']
 logFC_genome.yaxis.axis_label = config['plots']['logFC_genome_plot']['y_axis_label']
 logFC_genome.xaxis.visible = config['plots']['logFC_genome_plot']['x_axis_label_visibility'] == "on"
 logFC_genome.yaxis.visible = config['plots']['logFC_genome_plot']['y_axis_label_visibility'] == "on"
 logFC_genome.xgrid.grid_line_color = None
+
+#############
+if(options.seg_file):
+    int_cn_visibitlity = config['plots']['int_cn_plot']['visibility'] == "on" and \
+            config['files']['segmentation_file']['column_names']['major_cn'] in seg.columns and \
+            config['files']['segmentation_file']['column_names']['minor_cn'] in seg.columns
+    # print(int_cn_visibitlity)
+    # print(seg.columns)
+
+    int_cn_flag = options.seg_file and \
+            config['plots']['int_cn_plot']['visibility'] == "on" and \
+            ((config['files']['segmentation_file']['column_names']['major_cn'] in seg.columns and
+            config['files']['segmentation_file']['column_names']['minor_cn'] in seg.columns) or
+            config['files']['segmentation_file']['column_names']['cell_frac'] in seg.columns)
+
+
+if (options.seg_file and int_cn_flag):
+    int_cn_genome = figure(plot_width=config['plots']['int_cn_plot']['width'],
+                      plot_height=config['plots']['int_cn_plot']['height'],
+                      tooltips=TOOLTIPS_INT_CN,
+                      tools=config['plots']['plot_tools'],
+                      output_backend=config['plots']['int_cn_plot']['output_backend'],
+                      active_scroll=config['plots']['int_cn_plot']['active_scroll'],
+                      active_tap="auto",
+                      x_range=logFC_genome.x_range,
+                      # y_range=DataRange1d(
+                      #     bounds=(min(seg[config['files']['segmentation_file']['column_names']['minor_cn']]) - 1,
+                      #             max(seg[config['files']['segmentation_file']['column_names']['major_cn']]) + 1)),
+                      title=config['plots']['int_cn_plot']['title'])
+
+    if (config['files']['segmentation_file']['column_names']['major_cn'] in seg.columns and
+      config['files']['segmentation_file']['column_names']['minor_cn'] in seg.columns):
+
+        int_cn_genome.segment(x0="genome_cumsum_start",
+                             y0="minor_cn",
+                             x1="genome_cumsum_end",
+                             y1="minor_cn",
+                             color=config['plots']['int_cn_plot']['segment_markers']['minor_segment_line_color'],
+                             line_width=config['plots']['int_cn_plot']['segment_markers']['minor_segment_line_width'],
+                             level="annotation",
+                             alpha=config['plots']['int_cn_plot']['segment_markers']['minor_segment_line_alpha'],
+                             source=source_seg)  # segmentation line
+
+        int_cn_genome.segment(x0="genome_cumsum_start",
+                             y0="major_cn",
+                             x1="genome_cumsum_end",
+                             y1="major_cn",
+                             color=config['plots']['int_cn_plot']['segment_markers']['major_segment_line_color'],
+                             line_width=config['plots']['int_cn_plot']['segment_markers']['major_segment_line_width'],
+                             level="annotation",
+                             alpha=config['plots']['int_cn_plot']['segment_markers']['major_segment_line_alpha'],
+                             source=source_seg)  # segmentation line
+
+    if (config['files']['segmentation_file']['column_names']['cell_frac'] in seg.columns):
+        int_cn_genome.quad(top=max(seg[config['files']['segmentation_file']['column_names']['major_cn']]),
+               bottom=min(seg[config['files']['segmentation_file']['column_names']['minor_cn']]),
+               left="genome_cumsum_start",
+               right="genome_cumsum_end",
+               color=config['plots']['int_cn_plot']['cell_frac_color'],
+               alpha="cell_frac",
+               source=source_seg)
+
+
+    int_cn_genome.xaxis.axis_label = config['plots']['int_cn_plot']['x_axis_label']
+    int_cn_genome.yaxis.axis_label = config['plots']['int_cn_plot']['y_axis_label']
+    int_cn_genome.xaxis.visible = config['plots']['int_cn_plot']['x_axis_label_visibility'] == "on"
+    int_cn_genome.yaxis.visible = config['plots']['int_cn_plot']['y_axis_label_visibility'] == "on"
+    int_cn_genome.xgrid.grid_line_color = None
+
 
 #############
 if (options.annot_file):
@@ -937,60 +1137,96 @@ if (options.gene_file):
 table_bin_div = Div(text="<b>Bin Data</b>")
 
 if (options.vcf_file and options.annot_file and options.gene_file and not df_vaf.empty):
-    plots = gridplot([[logFC_genome], [logFC_genome_gene_track], [VAF_genome], [logFC]], toolbar_location='left',
-                     merge_tools=True)
+    if (int_cn_flag):
+        plots = gridplot([[logFC_genome], [logFC_genome_gene_track], [VAF_genome], [int_cn_genome],
+                          [logFC]], toolbar_location='left', merge_tools=True)
+    else :
+        plots = gridplot([[logFC_genome], [logFC_genome_gene_track], [VAF_genome], [logFC]], toolbar_location='left',
+                         merge_tools=True)
     fig_datatables = layout(
         row(column(table_gene_div, data_table_gene), column(table_data_div, data_table), column(select)))
     final_fig = layout(children=[[plots], [fig_datatables]])
 
 elif (options.vcf_file and options.annot_file and not df_vaf.empty):
-    plots = gridplot([[logFC_genome], [logFC_genome_gene_track], [VAF_genome], [logFC]], toolbar_location='left',
-                     merge_tools=True)
+    if (int_cn_flag):
+        plots = gridplot([[logFC_genome], [logFC_genome_gene_track], [VAF_genome], [int_cn_genome],
+                          [logFC]], toolbar_location='left', merge_tools=True)
+    else:
+        plots = gridplot([[logFC_genome], [logFC_genome_gene_track], [VAF_genome], [logFC]], toolbar_location='left',
+                         merge_tools=True)
     fig_datatables = layout(
         row(column(table_bin_div, data_table_cnr)))
     final_fig = layout(children=[[plots], [fig_datatables]])
 
 elif (options.vcf_file and options.gene_file and not df_vaf.empty):
-    plots = gridplot([[logFC_genome], [VAF_genome], [logFC]], toolbar_location='left',
+    if (int_cn_flag):
+        plots = gridplot([[logFC_genome], [VAF_genome], [int_cn_genome], [logFC]], toolbar_location='left',
                      merge_tools=True)
+    else:
+        plots = gridplot([[logFC_genome], [VAF_genome], [logFC]], toolbar_location='left',
+                         merge_tools=True)
     fig_datatables = layout(
         row(column(table_gene_div, data_table_gene), column(table_data_div, data_table), column(select)))
     final_fig = layout(children=[[plots], [fig_datatables]])
 
 elif (options.annot_file and options.gene_file):
-    plots = gridplot([[logFC_genome], [logFC_genome_gene_track], [logFC]], toolbar_location='left', merge_tools=True)
+    if (int_cn_flag):
+        plots = gridplot([[logFC_genome], [logFC_genome_gene_track], [int_cn_genome], [logFC]],
+                         toolbar_location='left', merge_tools=True)
+    else:
+        plots = gridplot([[logFC_genome], [logFC_genome_gene_track], [logFC]], toolbar_location='left',
+                         merge_tools=True)
     fig_datatables = layout(
         row(column(table_gene_div, data_table_gene), column(table_data_div, data_table), column(select)))
     final_fig = layout(children=[[plots], [fig_datatables]])
 
 elif (options.gene_file):
-    plots = gridplot([[logFC_genome], [logFC]], toolbar_location='left',
-                     merge_tools=True)
+    if (int_cn_flag):
+        plots = gridplot([[logFC_genome], [int_cn_genome], [logFC]], toolbar_location='left',
+                         merge_tools=True)
+    else:
+        plots = gridplot([[logFC_genome], [logFC]], toolbar_location='left',
+                         merge_tools=True)
     fig_datatables = layout(
         row(column(table_gene_div, data_table_gene), column(table_data_div, data_table), column(select)))
     final_fig = layout(children=[[plots], [fig_datatables]])
 
 elif (options.annot_file):
-    plots = gridplot([[logFC_genome], [logFC_genome_gene_track], [logFC]], toolbar_location='left',
-                     merge_tools=True)
+    if (int_cn_flag):
+        plots = gridplot([[logFC_genome], [logFC_genome_gene_track], [int_cn_genome], [logFC]],
+                         toolbar_location='left', merge_tools=True)
+    else:
+        plots = gridplot([[logFC_genome], [logFC_genome_gene_track], [logFC]], toolbar_location='left',
+                         merge_tools=True)
     fig_datatables = layout(
         row(column(table_bin_div, data_table_cnr)))
     final_fig = layout(children=[[plots], [fig_datatables]])
 
 elif (options.vcf_file and not df_vaf.empty):
-    plots = gridplot([[logFC_genome], [VAF_genome], [logFC]], toolbar_location='left',
+    if (int_cn_flag):
+        plots = gridplot([[logFC_genome], [VAF_genome], [int_cn_genome], [logFC]], toolbar_location='left',
                      merge_tools=True)
+    else:
+        plots = gridplot([[logFC_genome], [VAF_genome], [logFC]], toolbar_location='left',
+                         merge_tools=True)
     fig_datatables = layout(
         row(column(table_bin_div, data_table_cnr)))
     final_fig = layout(children=[[plots], [fig_datatables]])
 
 else:
-    plots = gridplot([[logFC_genome], [logFC]], toolbar_location='left',
+    if (options.seg_file and int_cn_flag):
+        plots = gridplot([[logFC_genome], [int_cn_flag], [logFC]], toolbar_location='left',
                      merge_tools=True)
+    else:
+        plots = gridplot([[logFC_genome], [logFC]], toolbar_location='left',
+                         merge_tools=True)
     fig_datatables = layout(
         row(column(table_bin_div, data_table_cnr)))
     final_fig = layout(children=[[plots], [fig_datatables]])
 
-save(final_fig)
+if (config['plots']['bokeh_js_css_code'] == "INLINE"):
+    save(final_fig, resources=INLINE)
+else:
+    save(final_fig)
 # show(final_fig)
 logging.info("Done!")

@@ -29,7 +29,10 @@
 				"start": "start",
 				"end": "end",
 				"log2FC": "log2",
-				"gene": "gene"
+				"gene": "gene",
+				"major_cn": "mcn",
+				"minor_cn": "lcn",
+				"cell_frac": "cf"
 			},
             "field_separator": "\t"
 		},
@@ -74,6 +77,7 @@
 		}
 	},
 	"plots":{
+		"bokeh_js_css_code": "CDN",
 		"logFC_genome_plot":{
 			"width": 1200,
 			"height": 250,
@@ -92,6 +96,11 @@
 			"gene_markers":{
 				"visibility": "on",
 				"color": "violet"
+			},
+			"artifact_mask":{
+				"visibility": "on",
+				"color": "black",
+				"alpha": 0.7
 			},
 			"x_axis_label_visibility": "on",
 			"x_axis_label": "Genome Location",
@@ -155,6 +164,26 @@
 			"x_axis_label": "Genome Location",
 			"y_axis_label_visibility": "on",
 			"y_axis_label": "VAF"
+		},
+		"int_cn_plot":{
+			"width": 1200,
+			"height": 200,
+			"output_backend": "webgl",
+			"active_scroll": "xwheel_zoom",
+			"title": "Integer Copy Number",
+			"visibility":"on",
+			"segment_markers":{
+				"major_segment_line_color": "black",
+				"minor_segment_line_color": "red",
+				"major_segment_line_width": 4,
+				"minor_segment_line_width": 4,
+				"major_segment_line_alpha": 1,
+				"minor_segment_line_alpha": 1},
+			"cell_frac_color": "goldenrod",
+			"x_axis_label_visibility": "on",
+			"x_axis_label": "Genome Location",
+			"y_axis_label_visibility": "on",
+			"y_axis_label": "CN"
 		},
 		"plot_tools": ["crosshair", "pan", "xwheel_zoom", "xbox_select", "tap", "reset", "save", "zoom_in", "zoom_out","box_zoom"],
 		"ratio_table":{
