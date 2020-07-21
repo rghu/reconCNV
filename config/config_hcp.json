@@ -1,0 +1,213 @@
+{
+	"files":{
+		"genome_build": "hg19",
+		"ratio_file":{
+			"column_names":{
+				"chromosome": "chromosome",
+				"start":"start",
+				"end":"end",
+				"gene": "gene",
+				"log2FC": "log2",
+				"weight": "weight"
+			},
+            "field_separator": "\t",
+			"off_target_label": "Antitarget",
+			"off_target_low_conf_log2": -10,
+			"weight_scaling_factor": 10
+		},
+		"genome_file":{
+			"column_names":{
+				"chromosome": "chromosome",
+				"chr_length": "length",
+				"chr_cumulative_length": "length_cumsum"
+			},
+            "field_separator": "\t"
+		},
+		"segmentation_file":{
+			"column_names":{
+				"chromosome": "chromosome",
+				"start": "start",
+				"end": "end",
+				"log2FC": "log2",
+				"gene": "gene",
+				"major_cn": "mcn",
+				"minor_cn": "lcn",
+				"cell_frac": "cf"
+			},
+            "field_separator": "\t"
+		},
+		"gene_file":{
+			"column_names":{
+				"chromosome": "chromosome",
+				"start": "start",
+				"end": "end",
+				"gene": "gene",
+				"log2FC": "log2"
+			},
+            "field_separator": "\t",
+			"loss_threshold": -0.8,
+			"deep_loss_threshold": -1.2,
+			"gain_threshold" : 0.4,
+			"amp_threshold": 1.5
+		},
+		"annotation_file":{
+			"column_names":{
+				"chromosome": "chromosome",
+				"exon_start": "exonStarts",
+				"exon_end": "exonEnds",
+				"tx_id": "name",
+				"exon_number": "exon_number",
+				"gene": "name2"
+			},
+            "field_separator": "\t"
+		},
+		"vcf_file":{
+			"info_fields":{
+				"depth": "TC",
+				"forward_alt_reads": "NF",
+				"reverse_alt_reads": "NR"
+			},
+			"thresholds":{
+				"depth": 20,
+				"forward_alt_reads": 5,
+				"reverse_alt_reads": 5,
+				"low_vaf_filter": 0.00,
+				"high_vaf_filter": 1.00
+			}
+		}
+	},
+	"plots":{
+		"bokeh_js_css_code": "CDN",
+		"logFC_genome_plot":{
+			"width": 1200,
+			"height": 250,
+			"output_backend": "webgl",
+			"active_scroll": "xwheel_zoom",
+			"title": "Genome Level CNV",
+			"point_line_color": "black",
+			"point_off_target_color": "lightgrey",
+			"point_on_target_color": "red",
+			"segment_markers":{
+				"visibility": "on",
+				"segment_line_color": "orange",
+				"segment_line_width": 4,
+				"segment_line_alpha": 0.9
+			},
+			"gene_markers":{
+				"visibility": "on",
+				"color": "violet"
+			},
+			"artifact_mask":{
+				"visibility": "on",
+				"color": "black",
+				"alpha": 0.7
+			},
+			"x_axis_label_visibility": "on",
+			"x_axis_label": "Genome Location",
+			"y_axis_label_visibility": "on",
+			"y_axis_label": "log2(FC)"
+		},
+		"annotation_plot":{
+			"width": 1200,
+			"height": 80,
+			"output_backend": "webgl",
+			"active_scroll": "xwheel_zoom",
+			"title": "Gene annotation track",
+			"line_color": "blue",
+			"line_width": 20,
+			"line_alpha": 0.9
+		},
+		"logFC_ind_plot":{
+			"width": 1200,
+			"height": 250,
+			"output_backend": "webgl",
+			"active_scroll": "xwheel_zoom",
+			"title": "Bin Level CNV",
+			"point_line_color": "black",
+			"point_off_target_color": "lightgrey",
+			"point_on_target_color": "red",
+			"segment_markers":{
+				"visibility": "on",
+				"segment_line_color": "orange",
+				"segment_line_width": 4,
+				"segment_line_alpha": 0.9
+			},
+			"gene_markers":{
+				"visibility": "on",
+				"color": "violet"
+			},
+			"x_axis_label_visibility": "on",
+			"x_axis_label": "Bin Index",
+			"y_axis_label_visibility": "on",
+			"y_axis_label": "log2(FC)"
+		},
+		"vaf_plot":{
+			"width": 1200,
+			"height": 150,
+			"output_backend": "webgl",
+			"active_scroll": "xwheel_zoom",
+			"title": "SNP Allele Fractions",
+			"point_size": 4,
+			"point_color": "blue",
+			"point_line_color": "black",
+			"segment_markers":{
+				"visibility":"off",
+				"segment_line_color": "orange",
+				"segment_line_width": 3,
+				"segment_line_alpha": 0.35},
+			"gene_markers":{
+				"visibility":"on",
+				"gene_line_color": "green",
+				"gene_line_width": 4,
+				"gene_line_alpha": 0.6},
+			"x_axis_label_visibility": "on",
+			"x_axis_label": "Genome Location",
+			"y_axis_label_visibility": "on",
+			"y_axis_label": "VAF"
+		},
+		"int_cn_plot":{
+			"width": 1200,
+			"height": 200,
+			"output_backend": "webgl",
+			"active_scroll": "xwheel_zoom",
+			"title": "Integer Copy Number",
+			"visibility":"on",
+			"segment_markers":{
+				"major_segment_line_color": "black",
+				"minor_segment_line_color": "red",
+				"major_segment_line_width": 4,
+				"minor_segment_line_width": 4,
+				"major_segment_line_alpha": 1,
+				"minor_segment_line_alpha": 1},
+			"cell_frac_color": "goldenrod",
+			"x_axis_label_visibility": "on",
+			"x_axis_label": "Genome Location",
+			"y_axis_label_visibility": "on",
+			"y_axis_label": "CN"
+		},
+		"plot_tools": ["crosshair", "pan", "xwheel_zoom", "xbox_select", "tap", "reset", "save", "zoom_in", "zoom_out","box_zoom"],
+		"ratio_table":{
+			"width": 550,
+			"height": 250
+		},
+		"gene_table":{
+			"width": 550,
+			"height": 250
+		},
+		"filtered_table":{
+			"width": 550,
+			"height": 250
+		},
+		"chromosome_boundaries":{
+			"line_color": "black",
+			"line_width": 2,
+			"line_dash": "dotted",
+			"line_alpha": 0.8,
+			"text_color": "black",
+			"text_font_size": "9pt",
+			"text_background_color": "goldenrod",
+			"text_background_alpha": 0.4,
+			"text_font_style": "bold"
+		}
+	}
+}
