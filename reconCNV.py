@@ -369,15 +369,15 @@ if (options.vcf_file):
                 len(record.REF) == 1 and \
                 ((record.INFO[config['files']['vcf_file']['info_fields']['forward_alt_reads']][0] +
                   record.INFO[config['files']['vcf_file']['info_fields']['reverse_alt_reads']][0]) / record.INFO[
-                     config['files']['vcf_file']['info_fields']['depth']] > config['files']['vcf_file']['thresholds'][
+                     config['files']['vcf_file']['info_fields']['depth']] >= config['files']['vcf_file']['thresholds'][
                      'low_vaf_filter'] and
                  (record.INFO[config['files']['vcf_file']['info_fields']['forward_alt_reads']][0] +
                   record.INFO[config['files']['vcf_file']['info_fields']['reverse_alt_reads']][0]) / record.INFO[
-                     config['files']['vcf_file']['info_fields']['depth']] < config['files']['vcf_file']['thresholds'][
+                     config['files']['vcf_file']['info_fields']['depth']] <= config['files']['vcf_file']['thresholds'][
                      'high_vaf_filter']) and \
-                record.INFO[config['files']['vcf_file']['info_fields']['forward_alt_reads']][0] > \
+                record.INFO[config['files']['vcf_file']['info_fields']['forward_alt_reads']][0] >= \
                 config['files']['vcf_file']['thresholds']['forward_alt_reads'] and \
-                record.INFO[config['files']['vcf_file']['info_fields']['reverse_alt_reads']][0] > \
+                record.INFO[config['files']['vcf_file']['info_fields']['reverse_alt_reads']][0] >= \
                 config['files']['vcf_file']['thresholds']['reverse_alt_reads']:
             df_vaf.append({'chromosome': record.CHROM,
                            'start': record.POS,
@@ -769,6 +769,8 @@ logFC_genome.yaxis.visible = config['plots']['logFC_genome_plot']['y_axis_label_
 logFC_genome.xgrid.grid_line_color = None
 
 #############
+int_cn_flag = 0
+
 if(options.seg_file):
     int_cn_visibitlity = config['plots']['int_cn_plot']['visibility'] == "on" and \
             config['files']['segmentation_file']['column_names']['major_cn'] in seg.columns and \
