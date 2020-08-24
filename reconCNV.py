@@ -1217,8 +1217,8 @@ elif (options.vcf_file and not df_vaf.empty):
 
 else:
     if (options.seg_file and int_cn_flag):
-        plots = gridplot([[logFC_genome], [int_cn_flag], [logFC]], toolbar_location='left',
-                     merge_tools=True)
+        plots = gridplot([[logFC_genome], [int_cn_genome], [logFC]], toolbar_location='left',
+                         merge_tools=True)
     else:
         plots = gridplot([[logFC_genome], [logFC]], toolbar_location='left',
                          merge_tools=True)

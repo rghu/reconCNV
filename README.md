@@ -18,20 +18,16 @@ The easiest way to get started with reconCNV is via `conda`. Using `conda` ensur
     
 2. Create your virtual environment. In the below example we are creating a virtual environment called "reconCNV".
     ```
-    conda create -n reconCNV python=3.6
+    conda env create -f environment.yml
     ```
 3. Activate your virtual environment.
     ```
     conda activate reconCNV
     ```
-4. Install all python module dependencies
+4. You are now ready to use reconCNV!
+5. Once you are done using the virtual environment you can exit it.
     ```
-    pip install --user --requirement requirements.txt
-    ```
-5. You are now ready to use reconCNV!
-6. Once you are done using the virtual environment you can exit it.
-    ```
-    source deactivate reconCNV
+    conda deactivate
     ```
     
 ## Usage

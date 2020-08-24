@@ -1,0 +1,12 @@
+name: reconCNV
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+  - bcbio
+dependencies:
+  - python=3.6
+  - bokeh=2.2.0
+  - pandas=0.25.3
+  - pyvcf
+
