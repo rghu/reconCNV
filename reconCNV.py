@@ -366,6 +366,7 @@ if (options.vcf_file):
         if record.INFO[config['files']['vcf_file']['info_fields']['depth']] >= \
                 config['files']['vcf_file']['thresholds']['depth'] and \
                 record.CHROM != 'X' and \
+                len(record.REF) == 1 and \
                 len(record.ALT) == 1 and \
                 ((record.INFO[config['files']['vcf_file']['info_fields']['forward_alt_reads']][0] +
                   record.INFO[config['files']['vcf_file']['info_fields']['reverse_alt_reads']][0]) / record.INFO[
