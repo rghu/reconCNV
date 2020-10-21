@@ -69,8 +69,8 @@
 			},
 			"thresholds":{
 				"depth": 20,
-				"forward_alt_reads": 5,
-				"reverse_alt_reads": 5,
+				"forward_alt_reads": 0,
+				"reverse_alt_reads": 0,
 				"low_vaf_filter": 0.00,
 				"high_vaf_filter": 1.00
 			}
