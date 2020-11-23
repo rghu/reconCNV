@@ -6,7 +6,7 @@ channels:
   - bcbio
 dependencies:
   - python=3.6
-  - bokeh=2.2.0
+  - bokeh=1.4.0
   - pandas=0.25.3
   - pyvcf
 
