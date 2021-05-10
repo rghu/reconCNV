@@ -228,6 +228,10 @@ data[config['files']['ratio_file']['column_names']['log2FC']] = np.where(np.logi
         'off_target_low_conf_log2'], data.label == "Antitarget"), np.nan, data[config['files']['ratio_file'][
     'column_names']['log2FC']])
 
+if data.label[0] == "Antitarget" and np.isnan(data[config['files']['ratio_file']['column_names']['log2FC']][0]):
+    data.loc[0, config['files']['ratio_file']['column_names']['log2FC']] = 0
+    #print("Changing first log2FC value manually to 0! -> related to Bokeh not able to serialize beginning with NaN")
+
 chr_cumsum = pd.read_csv(options.genome_file, sep=config['files']['genome_file']['field_separator'])
 logging.info("Successfully read the genome file.")
 
